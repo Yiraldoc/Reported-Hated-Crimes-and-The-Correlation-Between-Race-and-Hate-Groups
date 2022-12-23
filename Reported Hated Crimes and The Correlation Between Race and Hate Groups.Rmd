@@ -1,0 +1,208 @@
+---
+title: "Reported Hated Crimes and The Correlation Between Race and Hate Groups"
+author: "Yiraldo R. Campos Perez"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### Step 1: 
+
+####The first step was to load the dataset and label it "hate_crime". Once that is done, I examined the dataset and encountered the reality that within the dataset, there are certain incidents where the race of the offender is not listed. As this variable is important for my research, I decided to subset out any incidents in which the offender's race is listed as "unknown" and or race is labeled by multiple, making it unclear. I proceeded with running codes to better understand the range of information within the dataset. In terms of observation, each row within the dataset represents a single reported crime, so in the case of this dataset, there are 117820 incidents and or observations. These incidents ranged between the years 1991 through 2020
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+hate_crime <- read.csv("hate_crime.csv")
+
+hate_crime <- subset(hate_crime, OFFENDER_RACE != "Unknown")
+hate_crime <- subset(hate_crime, OFFENDER_RACE != "Multiple")
+
+nrow(hate_crime)
+
+range(hate_crime$DATA_YEAR)
+
+```
+
+
+### Step 2
+
+##### Examining the counterpart to the variable of white offenders, within the dataset, there were multiple different races that were listed as the offender, so to make it more condensed, as I am looking at particularly white offenders and people of color, I combined all the races other than white under a new variable labeled as "POC". If the offender was originally white, I labeled them as white; if not, I labeled them as POC
+
+```{r}
+
+hate_crime$OFFENDER_RACE <- ifelse(hate_crime$OFFENDER_RACE != "White", "POC", "White")
+
+```
+
+
+
+### Step 3 
+
+##### Because I am examining the different kinds of offenses in terms of race, my next step was to analyze all the different kinds of offenses within the data and specifically eliminate any repeated offenses in order to get a clear list of all the different offenses. This came out to 312 different kinds of offenses, in which some offenses were a mix of two other different offenses.
+
+```{r}
+data.frame(unique(hate_crime$OFFENSE_NAME))
+```
+
+
+### Step 4
+
+##### Due to this research being focused on hate crimes as the root of an offense, I decided it would be adequate and more efficient to limit the 312 different kinds of offenses down to only 3 specific offenses. This will provide more specific comparisons of hate crimes between races and with that, the different kinds of offenses more specific with offenders who were white and who were of other races. These 3 offenses would be -- minimal, medium, and severe. The three offenses I cut down to are "Intimidation" to represent minimal offenses, "Simple Assault"to represent medium offenses and final,"Aggravated Assault" to represent severe offenses. With that said, I created 3 new datasets so that each new dataset will only cover a single offense. 
+
+
+```{r}
+
+simple_assault_offense <- subset(hate_crime, OFFENSE_NAME == "Simple Assault")
+
+intimidation_offense<- subset(hate_crime, OFFENSE_NAME == "Intimidation")
+
+aggravated_assault_offense<- subset(hate_crime, OFFENSE_NAME == "Aggravated Assault")
+
+
+```
+
+
+### Step 5
+
+##### I took the 3 recently created datasets that looked at the 3 individual offenses and bonded them together. I labeled this new dataset as "zhate_crime" as this is the original dataset, but more zoomed out to better understand the correlations
+
+```{r}
+
+zhate_crime<- rbind(simple_assault_offense, intimidation_offense, aggravated_assault_offense)
+
+```
+
+
+### Step 6
+
+##### ##### I created a table to look at the different offenses each racial group committed in comparison to the other. I proceed with creating a proportional table to identify the different averages of both white offenders and POC offenders in correlation to the three levels of offense.
+
+```{r}
+
+table_offense <- table(race = zhate_crime$OFFENDER_RACE, offense = zhate_crime$OFFENSE_NAME)
+
+table_offense 
+
+prop.table <- prop.table(table_offense)
+prop.table
+
+```
+
+
+### Step 7
+
+##### Just to examine the accuracy of the prop.table, I created a table that examined the same variables, but this time, I would look at the comparison for each year between 1991 through 2020. The new tables showcased that throughout all years, the racial group POC, constantly possed less offenses compared to white offenders; and this was for all three different ranges of offenses 
+
+
+```{r}
+table(race = zhate_crime$OFFENDER_RACE, offense = zhate_crime$OFFENSE_NAME, zhate_crime$DATA_YEAR)
+```
+
+
+### Step 8
+
+##### I took the information from the table and made a visualization of it. Identifying that the white offenders were most likely to commit an offense. With that said, white offenders were most likely to commit an offense of indimiatiation 
+
+```{r}
+
+barplot(table_offense,
+        ylim =  c(0,40000),
+        names = c("Aggravated Assault", "Intimidation", "Simple Assault"),
+        col = rainbow(2),
+        main = "Level of Offense Based On Race",
+        cex.main = .8, 
+        cex.names = .8, 
+        ylab = "Mean Views",
+        cex.lab = .8,
+        las = 1,
+        beside = TRUE)
+legend("top", legend = rownames(table_offense), fill = rainbow(2))
+
+
+```
+
+
+
+
+### Step 9
+
+##### In order to analyze the change of offense severity over the course of 30 years, I decided to first create a new column within the dataset and called it "offense_severity_range". I proceeded to match each offense with a level of severity from stage 1 being 33.33% severity(Intimidation), stage 2 being 66.66% severity(Simple Assault), and stage 3 being 99.99% severity (Aggravated Assault). I proceeded to make sure my vector was a numerical variable, which it is.
+
+```{r}
+
+zhate_crime$offense_severity_range <-
+
+zhate_crime$offense_severity_range[zhate_crime$OFFENSE_NAME == "Intimidation"] <-33.33
+
+
+zhate_crime$offense_severity_range[zhate_crime$OFFENSE_NAME == "Simple Assault"] <-66.66
+
+
+zhate_crime$offense_severity_range[zhate_crime$OFFENSE_NAME == "Aggravated Assault"] <-99.99
+
+class(zhate_crime$offense_severity_range) 
+```
+
+
+### Step 10
+
+##### I created a new variable that  held within a table that utilized the severity of the offense in correlation with the year of said offense and examined the average severity of each offense. 
+
+```{r}
+
+offense_range <- tapply(zhate_crime$offense_severity_range, zhate_crime$DATA_YEAR, mean)
+```
+
+
+### Step 11
+
+##### Taking the table previously created, I created a barplot with it that would visually represent the average severity of offense within each year from 1991-2020.
+
+```{r}
+
+
+barplot(offense_range,
+        ylim =  c(0,100), # y-axis dimensions
+     main="Severity of Offense Per Year",
+        cex.main = .8, # size of plot title
+        cex.names = .8, # size of name labels
+        xlab = "Year", # yaxis label
+        ylab = "Severity of Offense", # yaxis label
+        cex.lab = .8,# size of yaxis label
+        las = 1,
+        beside = TRUE)
+
+```
+
+
+
+### Step 12
+
+##### Moving onto the victim, because there was a plethora amount of different victims and I combined the data so that I will be only examining victims who were white and victims who were a minority( examining this variable similar to how I examined the variable POC). 
+
+```{r}
+
+zhate_crime$BIAS_DESC <- ifelse(zhate_crime$BIAS_DESC == "Anti-White","Anti-White" , "Anti- Minority")
+
+```
+
+
+
+
+
+###13
+
+##### I proceed by running two cross-tabulations in which I will examine both the race of the offender and the group of the victim of the offense simultaneously
+
+```{r}
+
+table(victim  = zhate_crime$BIAS_DESC, offender = zhate_crime$OFFENDER_RACE)
+
+prop.table(table(victim  = zhate_crime$BIAS_DESC, offender = zhate_crime$OFFENDER_RACE))
+
+```
+
+
